@@ -1,0 +1,1 @@
+rootProject.name = "codegen-browser-client-plugin"
