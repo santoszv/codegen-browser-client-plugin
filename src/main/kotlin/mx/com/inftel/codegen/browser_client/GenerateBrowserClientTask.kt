@@ -30,57 +30,23 @@ open class GenerateBrowserClientTask : DefaultTask() {
     @TaskAction
     fun execute() {
         ClassGraph()
-                .overrideClassLoaders(ClassLoader.getPlatformClassLoader())
-                .overrideClasspath(classpath.get())
-                .enableClassInfo()
-                .enableMethodInfo()
-                .enableAnnotationInfo()
-                .scan()
-                .use { result ->
-                    val outputDir = project.file(output.get())
-                    val classInfoList = result.getClassesWithAnnotation("mx.com.inftel.codegen.rest.BrowserClient")
-                    for (classInfo in classInfoList) {
-                        if (Modifier.isPublic(classInfo.modifiers)
-                                && !Modifier.isStatic(classInfo.modifiers)
-                                && !Modifier.isAbstract(classInfo.modifiers)) {
-                            val resourceModel = ResourceModel().also { it.fillResourceModel(classInfo) }
-                            val simpleName = classInfo.simpleName
-                            val packageName = classInfo.packageName
-                            val packageDir = packageName.replace('.', '/')
-                            val outputFile = if (packageDir.isBlank()) {
-                                File(outputDir, "${simpleName}.kt")
-                            } else {
-                                File(outputDir, "${packageDir}/${simpleName}.kt")
-                            }
-                            outputFile.parentFile.mkdirs()
-                            outputFile.bufferedWriter().use { writer ->
-                                generateResourceCode(writer, resourceModel)
-                            }
-                            for (method in resourceModel.methods.values) {
-                                val resultType = method.resultType
-                                if (resultType.isList) {
-                                    val listTypeParameter = resultType.listTypeParameter
-                                    representations.putIfAbsent(listTypeParameter.fullyQualifiedClassName, RepresentationModel().also { it.fillRepresentationModel(listTypeParameter.classInfo) })
-                                } else if (resultType is ClassRefTypeSignature) {
-                                    representations.putIfAbsent(resultType.fullyQualifiedClassName, RepresentationModel().also { it.fillRepresentationModel(resultType.classInfo) })
-                                }
-                                for (parameter in method.parameters.values) {
-                                    if (parameter.bodyEntity) {
-                                        val parameterType = parameter.parameterType
-                                        if (parameterType.isList) {
-                                            val listTypeParameter = parameterType.listTypeParameter
-                                            representations.putIfAbsent(listTypeParameter.fullyQualifiedClassName, RepresentationModel().also { it.fillRepresentationModel(listTypeParameter.classInfo) })
-                                        } else if (parameterType is ClassRefTypeSignature) {
-                                            representations.putIfAbsent(parameterType.fullyQualifiedClassName, RepresentationModel().also { it.fillRepresentationModel(parameterType.classInfo) })
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    for (representation in representations.values) {
-                        val simpleName = representation.representationSimpleName
-                        val packageName = representation.representationPackageName
+            .overrideClassLoaders(ClassLoader.getPlatformClassLoader())
+            .overrideClasspath(classpath.get())
+            .enableClassInfo()
+            .enableMethodInfo()
+            .enableAnnotationInfo()
+            .scan()
+            .use { result ->
+                val outputDir = project.file(output.get())
+                val classInfoList = result.getClassesWithAnnotation("mx.com.inftel.codegen.rest.BrowserClient")
+                for (classInfo in classInfoList) {
+                    if (Modifier.isPublic(classInfo.modifiers)
+                        && !Modifier.isStatic(classInfo.modifiers)
+                        && !Modifier.isAbstract(classInfo.modifiers)
+                    ) {
+                        val resourceModel = ResourceModel().also { it.fillResourceModel(classInfo) }
+                        val simpleName = classInfo.simpleName
+                        val packageName = classInfo.packageName
                         val packageDir = packageName.replace('.', '/')
                         val outputFile = if (packageDir.isBlank()) {
                             File(outputDir, "${simpleName}.kt")
@@ -89,10 +55,53 @@ open class GenerateBrowserClientTask : DefaultTask() {
                         }
                         outputFile.parentFile.mkdirs()
                         outputFile.bufferedWriter().use { writer ->
-                            generateRepresentationCode(writer, representation)
+                            generateResourceCode(writer, resourceModel)
+                        }
+                        for (method in resourceModel.methods.values) {
+                            val resultType = method.resultType
+                            if (resultType.isList) {
+                                val listTypeParameter = resultType.listTypeParameter
+                                representations.putIfAbsent(
+                                    listTypeParameter.fullyQualifiedClassName,
+                                    RepresentationModel().also { it.fillRepresentationModel(listTypeParameter.classInfo) })
+                            } else if (resultType is ClassRefTypeSignature) {
+                                representations.putIfAbsent(
+                                    resultType.fullyQualifiedClassName,
+                                    RepresentationModel().also { it.fillRepresentationModel(resultType.classInfo) })
+                            }
+                            for (parameter in method.parameters.values) {
+                                if (parameter.bodyEntity) {
+                                    val parameterType = parameter.parameterType
+                                    if (parameterType.isList) {
+                                        val listTypeParameter = parameterType.listTypeParameter
+                                        representations.putIfAbsent(
+                                            listTypeParameter.fullyQualifiedClassName,
+                                            RepresentationModel().also { it.fillRepresentationModel(listTypeParameter.classInfo) })
+                                    } else if (parameterType is ClassRefTypeSignature) {
+                                        representations.putIfAbsent(
+                                            parameterType.fullyQualifiedClassName,
+                                            RepresentationModel().also { it.fillRepresentationModel(parameterType.classInfo) })
+                                    }
+                                }
+                            }
                         }
                     }
                 }
+                for (representation in representations.values) {
+                    val simpleName = representation.representationSimpleName
+                    val packageName = representation.representationPackageName
+                    val packageDir = packageName.replace('.', '/')
+                    val outputFile = if (packageDir.isBlank()) {
+                        File(outputDir, "${simpleName}.kt")
+                    } else {
+                        File(outputDir, "${packageDir}/${simpleName}.kt")
+                    }
+                    outputFile.parentFile.mkdirs()
+                    outputFile.bufferedWriter().use { writer ->
+                        generateRepresentationCode(writer, representation)
+                    }
+                }
+            }
     }
 
     private fun generateResourceCode(writer: BufferedWriter, resourceModel: ResourceModel) {
@@ -412,7 +421,7 @@ open class GenerateBrowserClientTask : DefaultTask() {
                         "kotlin.Boolean" -> {
                             writer.newLine()
                             writer.newLine()
-                            writer.write("    var ${propertyModel.propertyName}: kotlin.Boolean = false")
+                            writer.write("    var is${propertyModel.propertyName.capitalize()}: kotlin.Boolean = false")
                         }
                         "kotlin.String" -> {
                             writer.newLine()
@@ -426,9 +435,18 @@ open class GenerateBrowserClientTask : DefaultTask() {
                         }
                     }
                 } else {
-                    writer.newLine()
-                    writer.newLine()
-                    writer.write("    var ${propertyModel.propertyName}: ${propertyModel.propertyGetter.typeSignatureOrTypeDescriptor.resultType.asString}? = null")
+                    when (val resultTypeAsString = propertyModel.propertyGetter.typeSignatureOrTypeDescriptor.resultType.asString) {
+                        "kotlin.Boolean" -> {
+                            writer.newLine()
+                            writer.newLine()
+                            writer.write("    var is${propertyModel.propertyName.capitalize()}: ${resultTypeAsString}? = null")
+                        }
+                        else -> {
+                            writer.newLine()
+                            writer.newLine()
+                            writer.write("    var ${propertyModel.propertyName}: ${resultTypeAsString}? = null")
+                        }
+                    }
                 }
             }
         }
@@ -446,8 +464,9 @@ open class GenerateBrowserClientTask : DefaultTask() {
         }
         for (methodInfo in classInfo.methodInfo) {
             if (Modifier.isPublic(methodInfo.modifiers)
-                    && !Modifier.isStatic(methodInfo.modifiers)
-                    && !Modifier.isAbstract(methodInfo.modifiers)) {
+                && !Modifier.isStatic(methodInfo.modifiers)
+                && !Modifier.isAbstract(methodInfo.modifiers)
+            ) {
                 methods[methodInfo.name] = MethodModel().also { it.fillMethodModel(methodInfo) }
             }
         }
