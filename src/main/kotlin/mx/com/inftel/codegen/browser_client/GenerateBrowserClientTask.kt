@@ -110,6 +110,8 @@ open class GenerateBrowserClientTask : DefaultTask() {
         }
         writer.newLine()
         writer.newLine()
+        writer.write("import kotlinx.serialization.builtins.serializer as _codegen_serializer")
+        writer.newLine()
         writer.write("import mx.com.inftel.codegen.ACCEPT_HEADER as _codegen_ACCEPT_HEADER")
         writer.newLine()
         writer.write("import mx.com.inftel.codegen.ACCEPT_LANGUAGE_HEADER as _codegen_ACCEPT_LANGUAGE_HEADER")
@@ -315,20 +317,12 @@ open class GenerateBrowserClientTask : DefaultTask() {
 
     private fun generateBodyLogic(writer: BufferedWriter, methodModel: MethodModel) {
         val bodyEntity = methodModel.parameters.values.firstOrNull { it.bodyEntity }
-        when {
-            bodyEntity == null -> {
-                writer.newLine()
-                writer.write("        val _body: Any = kotlin.Unit")
-            }
-            bodyEntity.parameterType.isList -> {
-                val listParameterType = bodyEntity.parameterType.listTypeParameter
-                writer.newLine()
-                writer.write("        val _body: Any = kotlinx.serialization.json.Json.Default.encodeToString(kotlinx.serialization.builtins.ListSerializer(${listParameterType.asString}.serializer()), ${bodyEntity.parameterName})")
-            }
-            else -> {
-                writer.newLine()
-                writer.write("        val _body: Any = kotlinx.serialization.json.Json.Default.encodeToString(${bodyEntity.parameterType.asString}.serializer(), ${bodyEntity.parameterName})")
-            }
+        if (bodyEntity == null) {
+            writer.newLine()
+            writer.write("        val _body: Any = kotlin.Unit")
+        } else {
+            writer.newLine()
+            writer.write("        val _body: Any = kotlinx.serialization.json.Json.Default.encodeToString(${bodyEntity.parameterType.asSerializer}, ${bodyEntity.parameterName})")
         }
     }
 
@@ -366,16 +360,10 @@ open class GenerateBrowserClientTask : DefaultTask() {
     }
 
     private fun generateResultLogic(writer: BufferedWriter, methodModel: MethodModel) {
-        if (methodModel.resultType.isList) {
-            val listParameterType = methodModel.resultType.listTypeParameter
+        val resultType = methodModel.resultType
+        if (resultType.asString != "kotlin.Unit") {
             writer.newLine()
-            writer.write("        return kotlinx.serialization.json.Json.Default.decodeFromString(kotlinx.serialization.builtins.ListSerializer(${listParameterType.asString}.serializer()), _xhr.responseText)")
-        } else {
-            val resultType = methodModel.resultType.asString
-            if (resultType != "kotlin.Unit") {
-                writer.newLine()
-                writer.write("        return kotlinx.serialization.json.Json.Default.decodeFromString(${resultType}.serializer(), _xhr.responseText)")
-            }
+            writer.write("        return kotlinx.serialization.json.Json.Default.decodeFromString(${resultType.asSerializer}, _xhr.responseText)")
         }
     }
 
@@ -602,6 +590,56 @@ open class GenerateBrowserClientTask : DefaultTask() {
             return (this as ClassRefTypeSignature).typeArguments[0].typeSignature as ClassRefTypeSignature
         }
 
+    private val TypeSignature.isMap: Boolean
+        get() {
+            return (this as? ClassRefTypeSignature)?.fullyQualifiedClassName == "java.util.Map"
+        }
+
+    private val TypeSignature.mapTypeParameters: Pair<ClassRefTypeSignature, ClassRefTypeSignature>
+        get() {
+            val mapRefTypeSignature = this as ClassRefTypeSignature
+            val keyRefTypeSignature = mapRefTypeSignature.typeArguments[0].typeSignature as ClassRefTypeSignature
+            val valueRefTypeSignature = mapRefTypeSignature.typeArguments[1].typeSignature as ClassRefTypeSignature
+            return Pair(keyRefTypeSignature, valueRefTypeSignature)
+        }
+
+    private val TypeSignature.asSerializer: String
+        get() {
+            return when (this) {
+                is BaseTypeSignature -> when (this.type) {
+                    Byte::class.javaPrimitiveType -> "kotlin.Byte._codegen_serializer()"
+                    Char::class.javaPrimitiveType -> "kotlin.Char._codegen_serializer()"
+                    Double::class.javaPrimitiveType -> "kotlin.Double._codegen_serializer()"
+                    Float::class.javaPrimitiveType -> "kotlin.Float._codegen_serializer()"
+                    Int::class.javaPrimitiveType -> "kotlin.Int._codegen_serializer()"
+                    Long::class.javaPrimitiveType -> "kotlin.Long._codegen_serializer()"
+                    Short::class.javaPrimitiveType -> "kotlin.Short._codegen_serializer()"
+                    Boolean::class.javaPrimitiveType -> "kotlin.Boolean._codegen_serializer()"
+                    Void::class.javaPrimitiveType -> "kotlin.Unit._codegen_serializer()"
+                    else -> throw RuntimeException()
+                }
+                is ClassRefTypeSignature -> when (this.fullyQualifiedClassName) {
+                    "java.lang.Byte" -> "kotlin.Byte._codegen_serializer()"
+                    "java.lang.Char" -> "kotlin.Char._codegen_serializer()"
+                    "java.lang.Double" -> "kotlin.Double._codegen_serializer()"
+                    "java.lang.Float" -> "kotlin.Float._codegen_serializer()"
+                    "java.lang.Integer" -> "kotlin.Int._codegen_serializer()"
+                    "java.lang.Long" -> "kotlin.Long._codegen_serializer()"
+                    "java.lang.Short" -> "kotlin.Short._codegen_serializer()"
+                    "java.lang.Boolean" -> "kotlin.Boolean._codegen_serializer()"
+                    "java.lang.Void" -> "kotlin.Unit._codegen_serializer()"
+                    "java.lang.String" -> "kotlin.String._codegen_serializer()"
+                    "java.util.List" -> "kotlinx.serialization.builtins.ListSerializer(${listTypeParameter.asSerializer})"
+                    "java.util.Map" -> {
+                        val (key, value) = mapTypeParameters
+                        "kotlinx.serialization.builtins.MapSerializer(${key.asSerializer}, ${value.asSerializer})"
+                    }
+                    else -> "${asString}.serializer()"
+                }
+                else -> throw RuntimeException()
+            }
+        }
+
     private val TypeSignature.asString: String
         get() {
             return when (this) {
@@ -628,11 +666,11 @@ open class GenerateBrowserClientTask : DefaultTask() {
                     "java.lang.Boolean" -> "kotlin.Boolean"
                     "java.lang.Void" -> "kotlin.Unit"
                     "java.lang.String" -> "kotlin.String"
-                    "java.util.UUID" -> "kotlin.String"
-                    "java.time.LocalDate" -> "kotlin.String"
-                    "java.time.LocalDateTime" -> "kotlin.String"
-                    "java.time.LocalTime" -> "kotlin.String"
                     "java.util.List" -> "kotlin.collections.List<${this.listTypeParameter.asString}>"
+                    "java.util.Map" -> {
+                        val (key, value) = this.mapTypeParameters
+                        "kotlin.collections.Map<${key.asString}, ${value.asString}>"
+                    }
                     else -> fullyQualifiedClassName
                 }
                 else -> throw RuntimeException()
