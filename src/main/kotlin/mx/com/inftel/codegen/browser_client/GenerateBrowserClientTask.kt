@@ -419,7 +419,9 @@ open class GenerateBrowserClientTask : DefaultTask() {
                         "kotlin.Boolean" -> {
                             writer.newLine()
                             writer.newLine()
-                            writer.write("    var is${propertyModel.propertyName.capitalize()}: kotlin.Boolean = false")
+                            writer.write("    @kotlinx.serialization.SerialName(\"${propertyModel.propertyName}\")")
+                            writer.newLine()
+                            writer.write("    var is${propertyModel.capitalizedName}: kotlin.Boolean = false")
                         }
                         "kotlin.String" -> {
                             writer.newLine()
@@ -437,7 +439,9 @@ open class GenerateBrowserClientTask : DefaultTask() {
                         "kotlin.Boolean" -> {
                             writer.newLine()
                             writer.newLine()
-                            writer.write("    var is${propertyModel.propertyName.capitalize()}: ${resultTypeAsString}? = null")
+                            writer.write("    @kotlinx.serialization.SerialName(\"${propertyModel.propertyName}\")")
+                            writer.newLine()
+                            writer.write("    var is${propertyModel.capitalizedName}: ${resultTypeAsString}? = null")
                         }
                         else -> {
                             writer.newLine()
