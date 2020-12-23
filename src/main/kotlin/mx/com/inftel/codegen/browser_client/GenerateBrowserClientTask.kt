@@ -30,7 +30,7 @@ open class GenerateBrowserClientTask : DefaultTask() {
     @TaskAction
     fun execute() {
         ClassGraph()
-            .overrideClassLoaders(ClassLoader.getPlatformClassLoader())
+            //.overrideClassLoaders(ClassLoader.getPlatformClassLoader())
             .overrideClasspath(classpath.get())
             .enableClassInfo()
             .enableMethodInfo()
@@ -61,13 +61,34 @@ open class GenerateBrowserClientTask : DefaultTask() {
                             val resultType = method.resultType
                             if (resultType.isList) {
                                 val listTypeParameter = resultType.listTypeParameter
-                                representations.putIfAbsent(
-                                    listTypeParameter.fullyQualifiedClassName,
-                                    RepresentationModel().also { it.fillRepresentationModel(listTypeParameter.classInfo) })
+                                val typeClassInfo = listTypeParameter.classInfo
+                                if (typeClassInfo != null) {
+                                    representations.putIfAbsent(
+                                        listTypeParameter.fullyQualifiedClassName,
+                                        RepresentationModel().also { it.fillRepresentationModel(typeClassInfo) }
+                                    )
+                                }
+                            } else if (resultType.isMap) {
+                                val mapTypeParameters = resultType.mapTypeParameters
+                                val firstTypeClassInfo = mapTypeParameters.first.classInfo
+                                val secondTypeClassInfo = mapTypeParameters.second.classInfo
+                                if (firstTypeClassInfo != null) {
+                                    representations.putIfAbsent(
+                                        mapTypeParameters.first.fullyQualifiedClassName,
+                                        RepresentationModel().also { it.fillRepresentationModel(firstTypeClassInfo) }
+                                    )
+                                }
+                                if (secondTypeClassInfo != null) {
+                                    representations.putIfAbsent(
+                                        mapTypeParameters.second.fullyQualifiedClassName,
+                                        RepresentationModel().also { it.fillRepresentationModel(secondTypeClassInfo) }
+                                    )
+                                }
                             } else if (resultType is ClassRefTypeSignature) {
                                 representations.putIfAbsent(
                                     resultType.fullyQualifiedClassName,
-                                    RepresentationModel().also { it.fillRepresentationModel(resultType.classInfo) })
+                                    RepresentationModel().also { it.fillRepresentationModel(resultType.classInfo) }
+                                )
                             }
                             for (parameter in method.parameters.values) {
                                 if (parameter.bodyEntity) {
