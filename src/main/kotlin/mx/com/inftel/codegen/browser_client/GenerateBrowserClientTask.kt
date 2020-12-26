@@ -147,9 +147,9 @@ open class GenerateBrowserClientTask : DefaultTask() {
         writer.newLine()
         writer.write("import mx.com.inftel.codegen.APPLICATION_JSON_TYPE as _codegen_APPLICATION_JSON_TYPE")
         writer.newLine()
-        writer.write("import mx.com.inftel.codegen.browser.aSend as _codegen_aSend")
+        writer.write("import mx.com.inftel.codegen.rest.aSend as _codegen_aSend")
         writer.newLine()
-        writer.write("import mx.com.inftel.codegen.browser.encodeURIComponent as _codegen_encodeURIComponent")
+        writer.write("import mx.com.inftel.codegen.rest.encodeURIComponent as _codegen_encodeURIComponent")
         writer.newLine()
         writer.write("import mx.com.inftel.codegen.rest.XHRException as _codegen_XHRException")
         writer.newLine()
@@ -158,6 +158,9 @@ open class GenerateBrowserClientTask : DefaultTask() {
         writer.newLine()
         writer.newLine()
         writer.write("    private var antiReplayToken = \"\"")
+        writer.newLine()
+        writer.newLine()
+        writer.write("    private var json = kotlinx.serialization.json.Json { encodeDefaults = true }")
         generateCheckAntiReplayToken(writer)
         for (methodModel in resourceModel.methods.values) {
             if (methodModel.getMethod) {
@@ -343,7 +346,7 @@ open class GenerateBrowserClientTask : DefaultTask() {
             writer.write("        val _body: Any = kotlin.Unit")
         } else {
             writer.newLine()
-            writer.write("        val _body: Any = kotlinx.serialization.json.Json.Default.encodeToString(${bodyEntity.parameterType.asSerializer}, ${bodyEntity.parameterName})")
+            writer.write("        val _body: Any = this.json.encodeToString(${bodyEntity.parameterType.asSerializer}, ${bodyEntity.parameterName})")
         }
     }
 
@@ -384,7 +387,7 @@ open class GenerateBrowserClientTask : DefaultTask() {
         val resultType = methodModel.resultType
         if (resultType.asString != "kotlin.Unit") {
             writer.newLine()
-            writer.write("        return kotlinx.serialization.json.Json.Default.decodeFromString(${resultType.asSerializer}, _xhr.responseText)")
+            writer.write("        return this.json.decodeFromString(${resultType.asSerializer}, _xhr.responseText)")
         }
     }
 
