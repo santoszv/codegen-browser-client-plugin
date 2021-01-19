@@ -10,7 +10,7 @@ class PropertyModel {
     lateinit var propertyGetter: MethodInfo
     lateinit var propertySetter: MethodInfo
 
-    var isNotNull = true
+    var isNotNull = false
 
     val isGetterInitialized: Boolean
         get() = this::propertyGetter.isInitialized
