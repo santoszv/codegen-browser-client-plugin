@@ -5,11 +5,7 @@ package mx.com.inftel.codegen.browser_client
 import io.github.classgraph.MethodInfo
 import io.github.classgraph.TypeSignature
 
-class PropertyModel(val getter: MethodInfo, val setter: MethodInfo) {
-
-    val type: TypeSignature by lazy {
-        getter.typeSignatureOrTypeDescriptor.resultType
-    }
+class PropertyModel(val getter: MethodInfo) {
 
     val propertyName: String by lazy {
         getter.propertyName
@@ -17,6 +13,10 @@ class PropertyModel(val getter: MethodInfo, val setter: MethodInfo) {
 
     val capitalizedName: String by lazy {
         getter.capitalizedName
+    }
+
+    val type: TypeSignature by lazy {
+        getter.typeSignatureOrTypeDescriptor.resultType
     }
 
     val isNotNull: Boolean by lazy {

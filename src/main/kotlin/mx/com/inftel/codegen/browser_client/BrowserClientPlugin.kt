@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package mx.com.inftel.codegen.browser_client
 
 import org.gradle.api.Plugin

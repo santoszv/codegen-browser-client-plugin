@@ -18,16 +18,15 @@ class RepresentationModel(private val classInfo: ClassInfo) {
     }
 
     val properties: List<PropertyModel> by lazy {
-        val getters = mutableListOf<MethodInfo>()
-        for (methodInfo in classInfo.methodInfo.filter { methodInfo: MethodInfo -> methodInfo.name.startsWith("get") || methodInfo.name.startsWith("is") }) {
-            getters.add(methodInfo)
+        val getters = classInfo.methodInfo.filter { methodInfo: MethodInfo ->
+            methodInfo.name.startsWith("get") || methodInfo.name.startsWith("is")
         }
         getters.mapNotNull { getter ->
-            val setter = classInfo.methodInfo.firstOrNull {
-                it.name == "set${getter.capitalizedName}"
+            val setter = classInfo.methodInfo.firstOrNull { methodInfo ->
+                methodInfo.name == "set${getter.capitalizedName}"
             }
             if (setter != null) {
-                PropertyModel(getter, setter)
+                PropertyModel(getter)
             } else {
                 null
             }
