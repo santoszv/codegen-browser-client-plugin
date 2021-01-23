@@ -70,10 +70,10 @@ class ResourceModel(private val classInfo: ClassInfo) {
         writer.write("class ${simpleName}(var baseUrl: kotlin.String, var authenticationToken: kotlin.String, var language: kotlin.String) {")
         writer.newLine()
         writer.newLine()
-        writer.write("    var antiReplayToken = \"\"")
+        writer.write("    var antiReplayToken: kotlin.String = \"\"")
         writer.newLine()
         writer.newLine()
-        writer.write("    var json = kotlinx.serialization.json.Json { encodeDefaults = true }")
+        writer.write("    var json: kotlinx.serialization.json.Json = kotlinx.serialization.json.Json { encodeDefaults = true }")
         generateInit(writer)
         for (method in methods) {
             if (method.isGet) {
@@ -96,7 +96,7 @@ class ResourceModel(private val classInfo: ClassInfo) {
     private fun generateInit(writer: BufferedWriter) {
         writer.newLine()
         writer.newLine()
-        writer.write("    private suspend fun init() {")
+        writer.write("    suspend fun init() {")
         writer.newLine()
         writer.write("        val xhr = org.w3c.xhr.XMLHttpRequest()")
         writer.newLine()
@@ -108,7 +108,7 @@ class ResourceModel(private val classInfo: ClassInfo) {
         writer.newLine()
         writer.write("        antiReplayToken = xhr.getResponseHeader(mx.com.inftel.codegen.ANTI_REPLAY_TOKEN_HEADER)")
         writer.newLine()
-        writer.write("                ?: \"\"")
+        writer.write("            ?: \"\"")
         writer.newLine()
         writer.write("        val status = xhr.status.toInt()")
         writer.newLine()

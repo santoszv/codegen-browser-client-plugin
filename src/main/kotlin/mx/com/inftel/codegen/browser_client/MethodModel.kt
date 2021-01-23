@@ -57,8 +57,8 @@ class MethodModel(private val methodInfo: MethodInfo) {
         writer.write("            throw kotlin.IllegalStateException(\"'antiReplayToken' is blank\")")
         writer.newLine()
         writer.write("        }")
-        generatePathLogic(writer, resourceModel)
         generateQueryLogic(writer)
+        generateUrlLogic(writer, resourceModel)
         generateBodyLogic(writer)
         generateSendLogic(writer, "GET")
         generateResultLogic(writer)
@@ -76,8 +76,8 @@ class MethodModel(private val methodInfo: MethodInfo) {
         writer.write("            throw kotlin.IllegalStateException(\"'antiReplayToken' is blank\")")
         writer.newLine()
         writer.write("        }")
-        generatePathLogic(writer, resourceModel)
         generateQueryLogic(writer)
+        generateUrlLogic(writer, resourceModel)
         generateBodyLogic(writer)
         generateSendLogic(writer, "POST")
         generateResultLogic(writer)
@@ -95,8 +95,8 @@ class MethodModel(private val methodInfo: MethodInfo) {
         writer.write("            throw kotlin.IllegalStateException(\"'antiReplayToken' is blank\")")
         writer.newLine()
         writer.write("        }")
-        generatePathLogic(writer, resourceModel)
         generateQueryLogic(writer)
+        generateUrlLogic(writer, resourceModel)
         generateBodyLogic(writer)
         generateSendLogic(writer, "PUT")
         generateResultLogic(writer)
@@ -114,40 +114,13 @@ class MethodModel(private val methodInfo: MethodInfo) {
         writer.write("            throw kotlin.IllegalStateException(\"'antiReplayToken' is blank\")")
         writer.newLine()
         writer.write("        }")
-        generatePathLogic(writer, resourceModel)
         generateQueryLogic(writer)
+        generateUrlLogic(writer, resourceModel)
         generateBodyLogic(writer)
         generateSendLogic(writer, "DELETE")
         generateResultLogic(writer)
         writer.newLine()
         writer.write("    }")
-    }
-
-    private fun generatePathLogic(writer: BufferedWriter, resourceModel: ResourceModel) {
-        writer.newLine()
-        writer.write("        val path = run {")
-        writer.newLine()
-        writer.write("            val components = kotlin.collections.ArrayList<String>()")
-        writer.newLine()
-        writer.write("            components.add(baseUrl)")
-        if (resourceModel.path.isNotEmpty()) {
-            writer.newLine()
-            writer.write("            components.add(\"${resourceModel.path}\")")
-        }
-        if (path.isNotEmpty()) {
-            writer.newLine()
-            writer.write("            components.add(\"${path}\")")
-        }
-        writer.newLine()
-        writer.write("            val path = components.joinToString(\"/\")")
-        for (parameterModel in parameters.filter { it.isPathParam }) {
-            writer.newLine()
-            writer.write("                    .replace(\"{${parameterModel.pathParamName}}\", encodeURIComponent(${parameterModel.name}.toString()))")
-        }
-        writer.newLine()
-        writer.write("            path")
-        writer.newLine()
-        writer.write("        }")
     }
 
     private fun generateQueryLogic(writer: BufferedWriter) {
@@ -180,6 +153,41 @@ class MethodModel(private val methodInfo: MethodInfo) {
         writer.write("        }")
     }
 
+    private fun generateUrlLogic(writer: BufferedWriter, resourceModel: ResourceModel) {
+        writer.newLine()
+        writer.write("        val url = run {")
+        writer.newLine()
+        writer.write("            val components = kotlin.collections.ArrayList<String>()")
+        writer.newLine()
+        writer.write("            components.add(baseUrl)")
+        if (resourceModel.path.isNotEmpty()) {
+            writer.newLine()
+            writer.write("            components.add(\"${resourceModel.path}\")")
+        }
+        if (path.isNotEmpty()) {
+            writer.newLine()
+            writer.write("            components.add(\"${path}\")")
+        }
+        writer.newLine()
+        writer.write("            val url = components.joinToString(\"/\")")
+        for (parameterModel in parameters.filter { it.isPathParam }) {
+            writer.newLine()
+            writer.write("                .replace(\"{${parameterModel.pathParamName}}\", encodeURIComponent(${parameterModel.name}.toString()))")
+        }
+        writer.newLine()
+        writer.write("            if (query.isBlank()) {")
+        writer.newLine()
+        writer.write("                url")
+        writer.newLine()
+        writer.write("            } else {")
+        writer.newLine()
+        writer.write("                \"\${url}?\${query}\"")
+        writer.newLine()
+        writer.write("            }")
+        writer.newLine()
+        writer.write("        }")
+    }
+
     private fun generateBodyLogic(writer: BufferedWriter) {
         val parameterModel = parameters.firstOrNull { it.isBodyParam }
         if (parameterModel == null) {
@@ -192,8 +200,6 @@ class MethodModel(private val methodInfo: MethodInfo) {
     }
 
     private fun generateSendLogic(writer: BufferedWriter, verb: String) {
-        writer.newLine()
-        writer.write("        val url = if (query.isBlank()) path else \"\${path}?\${query}\"")
         writer.newLine()
         writer.write("        val xhr = org.w3c.xhr.XMLHttpRequest()")
         writer.newLine()
@@ -213,7 +219,7 @@ class MethodModel(private val methodInfo: MethodInfo) {
         writer.newLine()
         writer.write("        antiReplayToken = xhr.getResponseHeader(mx.com.inftel.codegen.ANTI_REPLAY_TOKEN_HEADER)")
         writer.newLine()
-        writer.write("                ?: \"\"")
+        writer.write("            ?: \"\"")
         writer.newLine()
         writer.write("        val status = xhr.status.toInt()")
         writer.newLine()
