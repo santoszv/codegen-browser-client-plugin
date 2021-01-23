@@ -9,6 +9,10 @@ import java.lang.reflect.Modifier
 
 class ResourceModel(private val classInfo: ClassInfo) {
 
+    val fullyQualifiedName: String by lazy {
+        classInfo.name
+    }
+
     val packageName: String by lazy {
         classInfo.packageName
     }
@@ -96,7 +100,7 @@ class ResourceModel(private val classInfo: ClassInfo) {
     private fun generateInit(writer: BufferedWriter) {
         writer.newLine()
         writer.newLine()
-        writer.write("    suspend fun init() {")
+        writer.write("    suspend fun init(): $fullyQualifiedName {")
         writer.newLine()
         writer.write("        val xhr = org.w3c.xhr.XMLHttpRequest()")
         writer.newLine()
@@ -123,6 +127,8 @@ class ResourceModel(private val classInfo: ClassInfo) {
         writer.write("            throw kotlin.IllegalStateException(\"'antiReplayToken' is blank\")")
         writer.newLine()
         writer.write("        }")
+        writer.newLine()
+        writer.write("        return this")
         writer.newLine()
         writer.write("    }")
     }
