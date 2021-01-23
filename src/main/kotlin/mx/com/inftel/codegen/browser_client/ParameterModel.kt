@@ -1,22 +1,73 @@
+@file:Suppress("DuplicatedCode")
+
 package mx.com.inftel.codegen.browser_client
 
+import io.github.classgraph.MethodParameterInfo
 import io.github.classgraph.TypeSignature
 
-class ParameterModel {
+class ParameterModel(private val methodParameterInfo: MethodParameterInfo) {
 
-    var parameterName = ""
+    val name: String by lazy {
+        methodParameterInfo.name
+    }
 
-    lateinit var parameterType: TypeSignature
+    val type: TypeSignature by lazy {
+        methodParameterInfo.typeSignatureOrTypeDescriptor
+    }
 
-    var headerParam = false
-    var headerParamName = "false"
-    var matrixParam = false
-    var matrixParamName = "false"
-    var queryParam = false
-    var queryParamName = "false"
-    var pathParam = false
-    var pathParamName = "false"
+    val isHeaderParam: Boolean by lazy {
+        methodParameterInfo.hasAnnotation("javax.ws.rs.HeaderParam")
+    }
 
-    val bodyEntity: Boolean
-        get() = !(headerParam || matrixParam || queryParam || pathParam)
+    val isMatrixParam: Boolean by lazy {
+        methodParameterInfo.hasAnnotation("javax.ws.rs.MatrixParam")
+    }
+
+    val isQueryParam: Boolean by lazy {
+        methodParameterInfo.hasAnnotation("javax.ws.rs.QueryParam")
+    }
+
+    val isPathParam: Boolean by lazy {
+        methodParameterInfo.hasAnnotation("javax.ws.rs.PathParam")
+    }
+
+    val isBodyParam: Boolean by lazy {
+        !(isHeaderParam || isMatrixParam || isQueryParam || isPathParam)
+    }
+
+    val headerParamName: String by lazy {
+        val pathAnnotationInfo = methodParameterInfo.getAnnotationInfo("javax.ws.rs.HeaderParam")
+        if (pathAnnotationInfo != null) {
+            pathAnnotationInfo.parameterValues.first { it.name == "value" }.value as String
+        } else {
+            ""
+        }
+    }
+
+    val matrixParamName: String by lazy {
+        val pathAnnotationInfo = methodParameterInfo.getAnnotationInfo("javax.ws.rs.MatrixParam")
+        if (pathAnnotationInfo != null) {
+            pathAnnotationInfo.parameterValues.first { it.name == "value" }.value as String
+        } else {
+            ""
+        }
+    }
+
+    val queryParamName: String by lazy {
+        val pathAnnotationInfo = methodParameterInfo.getAnnotationInfo("javax.ws.rs.QueryParam")
+        if (pathAnnotationInfo != null) {
+            pathAnnotationInfo.parameterValues.first { it.name == "value" }.value as String
+        } else {
+            ""
+        }
+    }
+
+    val pathParamName: String by lazy {
+        val pathAnnotationInfo = methodParameterInfo.getAnnotationInfo("javax.ws.rs.PathParam")
+        if (pathAnnotationInfo != null) {
+            pathAnnotationInfo.parameterValues.first { it.name == "value" }.value as String
+        } else {
+            ""
+        }
+    }
 }

@@ -1,20 +1,27 @@
+@file:Suppress("DuplicatedCode")
+
 package mx.com.inftel.codegen.browser_client
 
 import io.github.classgraph.MethodInfo
+import io.github.classgraph.TypeSignature
 
-class PropertyModel {
+class PropertyModel(val getter: MethodInfo, val setter: MethodInfo) {
 
-    var propertyName = ""
-    var capitalizedName = ""
+    val type: TypeSignature by lazy {
+        getter.typeSignatureOrTypeDescriptor.resultType
+    }
 
-    lateinit var propertyGetter: MethodInfo
-    lateinit var propertySetter: MethodInfo
+    val propertyName: String by lazy {
+        getter.propertyName
+    }
 
-    var isNotNull = false
+    val capitalizedName: String by lazy {
+        getter.capitalizedName
+    }
 
-    val isGetterInitialized: Boolean
-        get() = this::propertyGetter.isInitialized
-
-    val isGeneratedCode: Boolean
-        get() = this::propertyGetter.isInitialized && this::propertySetter.isInitialized
+    val isNotNull: Boolean by lazy {
+        getter.hasAnnotation("org.jetbrains.annotations.NotNull")
+                || getter.hasAnnotation("javax.validation.constraints.NotNull")
+                || getter.hasAnnotation("javax.validation.constraints.NotBlank")
+    }
 }
