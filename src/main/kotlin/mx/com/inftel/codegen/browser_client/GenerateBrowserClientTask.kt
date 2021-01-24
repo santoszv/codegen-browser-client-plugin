@@ -28,6 +28,7 @@ open class GenerateBrowserClientTask : DefaultTask() {
         ClassGraph()
             .overrideClasspath(classpath.get())
             .enableClassInfo()
+            .enableFieldInfo()
             .enableMethodInfo()
             .enableAnnotationInfo()
             .scan()
@@ -40,10 +41,11 @@ open class GenerateBrowserClientTask : DefaultTask() {
                 }.map { classInfo ->
                     ResourceModel(classInfo)
                 }
-                val representationsName = mutableSetOf<String>()
                 for (resource in resources) {
                     resource.generateCode(outputDir)
                 }
+                //
+                val representationsName = mutableSetOf<String>()
                 for (resource in resources) {
                     for (method in resource.methods) {
                         if (method.resultType.isList) {
@@ -86,6 +88,7 @@ open class GenerateBrowserClientTask : DefaultTask() {
                         }
                     }
                 }
+                //
                 val representations = representationsName.mapNotNull { name ->
                     val classInfo = result.getClassInfo(name)
                     if (classInfo != null) {
@@ -96,6 +99,52 @@ open class GenerateBrowserClientTask : DefaultTask() {
                 }
                 for (representation in representations) {
                     representation.generateCode(outputDir)
+                }
+                //
+                val enumerationsName = mutableSetOf<String>()
+                for (resource in resources) {
+                    for (method in resource.methods) {
+                        if (method.resultType.isEnum) {
+                            val classInfo = (method.resultType as ClassRefTypeSignature).classInfo
+                            if (classInfo != null) {
+                                enumerationsName.add(classInfo.name)
+                            }
+                        }
+                    }
+                }
+                for (resource in resources) {
+                    for (method in resource.methods) {
+                        for (parameter in method.parameters) {
+                            if (parameter.type.isEnum) {
+                                val classInfo = (parameter.type as ClassRefTypeSignature).classInfo
+                                if (classInfo != null) {
+                                    enumerationsName.add(classInfo.name)
+                                }
+                            }
+                        }
+                    }
+                }
+                for (representation in representations) {
+                    for (property in representation.properties) {
+                        if (property.type.isEnum) {
+                            val classInfo = (property.type as ClassRefTypeSignature).classInfo
+                            if (classInfo != null) {
+                                enumerationsName.add(classInfo.name)
+                            }
+                        }
+                    }
+                }
+                //
+                val enumerations = enumerationsName.mapNotNull { name ->
+                    val classInfo = result.getClassInfo(name)
+                    if (classInfo != null) {
+                        EnumerationModel(classInfo)
+                    } else {
+                        null
+                    }
+                }
+                for (enumeration in enumerations) {
+                    enumeration.generateCode(outputDir)
                 }
             }
     }

@@ -89,6 +89,11 @@ val TypeSignature.asTypeString: String
         }
     }
 
+val TypeSignature.isEnum: Boolean
+    get() {
+        return (this as? ClassRefTypeSignature)?.classInfo?.isEnum ?: false
+    }
+
 val TypeSignature.isList: Boolean
     get() {
         return (this as? ClassRefTypeSignature)?.fullyQualifiedClassName == "java.util.List"
