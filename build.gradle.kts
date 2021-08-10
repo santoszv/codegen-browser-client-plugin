@@ -1,5 +1,5 @@
 group = "mx.com.inftel.codegen"
-version = "1.0.0-SNAPSHOT"
+version = "1.0.0"
 
 repositories {
     mavenCentral()
@@ -8,6 +8,7 @@ repositories {
 plugins {
     kotlin("jvm") version "1.3.72"
     `maven-publish`
+    signing
     `java-gradle-plugin`
 }
 
@@ -48,18 +49,56 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     }
 }
 
-publishing {
-    repositories {
-        maven {
-            url = if (project.version.toString().endsWith("-SNAPSHOT")) {
-                uri("https://nexus.inftelapps.com/repository/maven-snapshots/")
-            } else {
-                uri("https://nexus.inftelapps.com/repository/maven-releases/")
+val fakeJavadoc by tasks.registering(Jar::class) {
+    archiveBaseName.set("${project.name}-fake")
+    archiveClassifier.set("javadoc")
+    from(file("$projectDir/files/README"))
+}
+
+afterEvaluate {
+    publishing {
+        publications.withType<MavenPublication> {
+            pom {
+                name.set("${project.group}:${project.name}")
+                description.set("Codegen Browser Client Plugin")
+                url.set("https://github.com/santoszv/codegen-browser-client-plugin")
+                inceptionYear.set("2021")
+                licenses {
+                    license {
+                        name.set("Apache License, Version 2.0")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("santoszv")
+                        name.set("Santos Zatarain Vera")
+                        email.set("santoszv@inftel.com.mx")
+                        url.set("https://www.inftel.com.mx")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:https://github.com/santoszv/codegen-browser-client-plugin")
+                    developerConnection.set("scm:git:https://github.com/santoszv/codegen-browser-client-plugin")
+                    url.set("https://github.com/santoszv/codegen-browser-client-plugin")
+                }
             }
-            credentials {
-                username = properties["inftel.nexus.username"]?.toString()
-                password = properties["inftel.nexus.password"]?.toString()
+
+            signing.sign(this)
+        }
+
+        publications.named<MavenPublication>("pluginMaven") {
+            artifact(fakeJavadoc)
+        }
+
+        repositories {
+            maven {
+                setUrl(file("$projectDir/build/repo"))
             }
         }
     }
+}
+
+signing {
+    useGpgCmd()
 }
